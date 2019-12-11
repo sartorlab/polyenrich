@@ -1,0 +1,1043 @@
+---
+title: "Poly-Enrich"
+author: "Christopher T. Lee"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Set work directory here, if needed.
+
+All other paths in code blocks are likely to require changing.
+```{r}
+setwd(".")
+```
+
+# Table of Contents
+
+* [Running analysis](#running-analysis)
+* [Creating Figs and Tables](#figs-and-tables)
+  + [Figure 3: Poly-Enrich vs Poly-Enrich weighted](#figure-3)
+  + [Figure 4: Poly-Enrich vs ChIP-Enrich comparisons](#figure-4)
+  + [Figure 5: Power Simulations](#figure-5)
+  + [Figure 6: Repetitive Elements](#figure-6)
+  + [Supplementary Figure 1: Spline estimate comparisons]
+  + [Supplementary Figure 2: Type 1 error](#supplementary-figure-2)
+  + [Supplementary Figure 3: Extra Power Simulations](#supplementary-figure-3)
+  + [Supplementary Figure 4: Validatations between methods](#supplementary-figure-4)
+  + [Supplementary Figure 5: NTSS version of Figure 4](#supplementary-figure-5)
+  + [Supplementary Figure 6: Neuro-related terms for Repetitive Elements](#supplementary-figure-6)
+  + [Supplementary Figure 7: Poly-Enrich vs Broad-Enrich](#supplementary-figure-7)
+
+# Running analysis
+
+The [Figs and Tables](#figs-and-tables) section have downloads for already complete and cleaned analysis if you do not want to do that yourself.
+
+Download Supplementary Table 1 and place in working directory before proceeding.
+```{r eval = F}
+newpeaklist = gdata::read.xls("./Supplementary Table 1.xlsx", stringsAsFactors=F)
+```
+
+##### To download all the ENCODE ChIP-seq experiments used, follow this procedure:
+```{r eval = F}
+write.table(sprintf("%s.gz",newpeaklist$Dataset), "./ENCODE_datasets.txt", quote=F, row.names = F, col.names = F)
+```
+
+Run the following on bash in your working directory to download the ChIP-seq experiments:
+
+Use `brew install wget` if wget is not already installed.
+```
+awk '{print "wget http://hgdownload.cse.ucsc.edu/goldenPath/hg19/encodeDCC/wgEncodeAwgTfbsUniform/"$1}' <(cut -f 1 ENCODE_datasets.txt | grep narrowPeak) > tfbs_wget.sh
+
+bash tfbs_wget.sh
+```
+
+
+### Creating Poly-Enrich results files. 
+
+Total time: ~15m per results file, 90 total
+```{r eval = F}
+library(chipenrich)
+for (peak in newpeaklist$Dataset) {
+	out = polyenrich(peaks = sprintf("./%s.gz",peak),
+				 out_name = NULL,
+				 out_path = NULL,
+				 genome = "hg19",
+				 genesets = "GOBP",
+				 locusdef = "nearest_tss",
+				 method = "polyenrich",
+				 qc_plots = FALSE,
+				 max_geneset_size = 2000,
+				 n_cores = 1)  
+	saveRDS(out, sprintf("./nearest_tss.polyenrich.%s.rds",peak))
+}
+```
+
+### Creating Poly-Enrich weighted results files
+
+Used in "Poly-Enrich with weighted genomic regions"
+
+Total time: ~15m per results file, 90 total
+```{r eval = F}
+library(chipenrich)
+for (peak in newpeaklist$Dataset) {
+	out = polyenrich(peaks = sprintf("./%s.gz",peak),
+				 out_name = NULL,
+				 out_path = NULL,
+				 genome = "hg19",
+				 genesets = "GOBP",
+				 locusdef = "nearest_tss",
+				 method = "polyenrich_weighted",
+				 weighting = "signalValue",
+				 qc_plots = FALSE,
+				 max_geneset_size = 2000,
+				 n_cores = 1)  
+	saveRDS(out, sprintf("./nearest_tss.polyenrich_weighted_signalValue.%s.rds",peak))
+}
+```
+
+### Creating ChIP-Enrich results files.
+
+Used in "Comparison of the count-based (Poly-Enrich) versus binary (ChIP-Enrich) model of enrichment", "Hybrid test"
+
+Total time: ~15m per results file, 90 total
+```{r eval = F}
+library(chipenrich)
+for (peak in newpeaklist$Dataset) {
+	out = polyenrich(peaks = sprintf("./%s.gz",peak),
+				 out_name = NULL,
+				 out_path = NULL,
+				 genome = "hg19",
+				 genesets = "GOBP",
+				 locusdef = "nearest_tss",
+				 method = "polyenrich_weighted",
+				 weighting = "signalValue",
+				 qc_plots = FALSE,
+				 max_geneset_size = 2000,
+				 n_cores = 1)  
+	saveRDS(out, sprintf("./nearest_tss.chipenrich.%s.rds",peak))
+}
+```
+
+# Figs and Tables
+
+Common functions to be used later
+```{r eval = F}
+read.results <- function(path) {
+	read.table((path),comment.char="",quote="",sep="\t",header=T, stringsAsFactors = F)
+}
+
+#xdf and ydf are dataframes with columns in order: Geneset.ID, P.value, FDR, Status, N.Geneset.Genes (not necessary for colnames to be exact), xlabel and ylabel are labels for x and y axis - max length of 2 lines, mcex is size of margin font for xlabel and ylabel, if want to return merged xy_df, set return=TRUE
+#[,c(2, 4, 5, 8, 9)]
+plot_pval_comp= function(xdf,ydf,xlabel,ylabel,tfname,weights=1,mcex=0.6,return=FALSE){
+	old.suff = c(unlist(strsplit(names(xdf)[2],"P.value"))[2], unlist(strsplit(names(ydf)[2],"P.value"))[2])
+	names(xdf) = c('Geneset.ID','P.value','FDR','Status','n.genes')
+	names(ydf) = c('Geneset.ID','P.value','FDR','Status','n.genes')
+	
+	xy_df = merge(xdf, ydf, by="Geneset.ID", suffixes=c("_x","_y"))
+	xdf = xy_df[, c(1,grep('_x',names(xy_df)))]
+	ydf = xy_df[, c(1,grep('_y',names(xy_df)))]
+	
+	names(xdf) = c('Geneset.ID','P.value','FDR','Status','n.genes1')
+	names(ydf) = c('Geneset.ID','P.value','FDR','Status','n.genes2')
+	
+	
+	# enr/enr
+	col.code = ifelse(xdf$FDR <= 0.05 & ydf$FDR <=0.05 & xdf$Status=="enriched" & ydf$Status=="enriched","purple","black")
+	# enr/dep
+	col.code = ifelse(xdf$FDR <= 0.05 & ydf$FDR <=0.05 & xdf$Status=="enriched" & ydf$Status=="depleted","green3",col.code)
+	# dep/enr
+	col.code = ifelse(xdf$FDR <= 0.05 & ydf$FDR <=0.05 & xdf$Status=="depleted" & ydf$Status=="enriched","turquoise",col.code)
+	# dep/dep
+	col.code = ifelse(xdf$FDR <= 0.05 & ydf$FDR <=0.05 & xdf$Status=="depleted" & ydf$Status=="depleted","goldenrod3",col.code)
+	
+	
+	num.purple = sum(col.code=="purple")
+	num.green = sum(col.code=="green3")
+	num.turq = sum(col.code=="turquoise")
+	num.yellow = sum(col.code=="goldenrod3")
+	num.black = sum(col.code=="black")
+	
+	xx = (-log10(xdf$P.value)) * as.numeric(ifelse(xdf$Status=="enriched",1,-1))
+	yy = (-log10(ydf$P.value)) * as.numeric(ifelse(ydf$Status=="enriched",1,-1))
+	cor.test(yy,xx)
+	cor.r = formatC(as.numeric(cor.test(xx,yy)$estimate),format='f',digit=2)
+	
+	xymax = ceiling(max(c(xx,yy)))
+	xymin = floor(min(c(xx,yy)))
+	
+	xymax = max(c(xx,yy))+1
+	xymin = min(c(xx,yy))-1
+	
+	ytext = xymin/3
+	xtext = 4*(xymax/5)
+	par(mar=c(6, 7, 2.5, 3) + 0.1) #bottom, left, top, right
+	
+	a = paste("enr./enr. =",num.purple,sep='')
+	b = paste("enr./dep. =",num.green,sep='')
+	c = paste("dep./enr. =",num.turq,sep='')
+	d = paste("dep./dep. =",num.yellow,sep='')
+	e = paste("not sig. =",num.black,sep='')
+	
+	wcex=1
+	#plot(yy ~ xx, ylab = '', xlab='',pch=20,col=col.code,cex=0.7,cex.axis=wcex,cex.lab=wcex,ylim=c(xymin,xymax),xlim=c(xymin,xymax), main=tfname)
+	plot(yy ~ xx, ylab = '', xlab='',pch=20,col=col.code,cex=weights,cex.axis=wcex,cex.lab=wcex, cex.main = mcex,ylim=c(xymin,xymax),xlim=c(xymin,xymax), main=tfname)
+	
+	abline(h=0,v=0,lty=8, col="gray")
+	abline(a=0,b=1, col="gray")
+	text(xtext,ytext,paste("r = ",cor.r,sep=''),cex=wcex)
+	legend("topleft", legend=c("x/y",a,b,c,d), bty='n',pch=10, col=c(NA,'purple','green3','turquoise','goldenrod3'),cex=wcex)
+	
+	if(length(ylabel)==2){
+		mtext(side=2,text=ylabel[1],line=4.4,cex=mcex)
+		mtext(side=2,text=ylabel[2],line=2.7,cex=mcex)
+	}else{mtext(side=2,text=ylabel[1],line=2.7,cex=mcex)}
+	
+	if(length(xlabel)==2){
+		mtext(side=1,text=xlabel[1],line=2.7,cex=mcex)
+		mtext(side=1,text=xlabel[2],line=4.4,cex=mcex)
+	}else{mtext(side=1,text=xlabel[1],line=2.7,cex=mcex)}
+	
+	if(return==TRUE){
+		xy_df = merge(xdf, ydf, by="Geneset.ID", suffixes=old.suff)
+		xy_df$n.genes = apply(xy_df[,c('n.genes1','n.genes2')],1,max)
+		xy_df = subset(xy_df, select=-c(n.genes1, n.genes2))
+		xy_df$col_code = col.code
+		return(xy_df)
+	}
+}
+```
+
+
+### Figure 3
+Poly-Enrich vs Poly-Enrich weighted
+```{r eval = F}
+# PE vs PEW signed QQ plots
+#Gm TAF1
+pewres = read.results("./nearest_tss.polyenrich_weighted_signalValue.wgEncodeAwgTfbsHaibGm12878Taf1Pcr1xUniPk.narrowPeak_results.tab")
+peres =  read.results("./nearest_tss.polyenrich.wgEncodeAwgTfbsHaibGm12878Taf1Pcr1xUniPk.narrowPeak_results.tab")
+dev.new(width=4, height=4)
+plot_pval_comp(peres[,c(2, 4, 5, 8, 9)], pewres[,c(2, 4, 5, 8, 9)], xlabel = "Poly-Enrich signed -log10 p-value", 
+			   ylabel = "Poly-Enrich Weighted signed -log10 p-value", tfname = "Gm12878 TAF1", mcex = 1.5)
+
+
+#H1 EGR1
+pewres = read.results("./nearest_tss.polyenrich_weighted_signalValue.wgEncodeAwgTfbsHaibH1hescEgr1V0416102UniPk.narrowPeak_results.tab")
+peres = read.results("./PEWresults/nearest_tss.polyenrich.wgEncodeAwgTfbsHaibH1hescEgr1V0416102UniPk.narrowPeak_results.tab")
+dev.new(width=4, height=4)
+plot_pval_comp(peres[,c(2, 4, 5, 8, 9)], pewres[,c(2, 4, 5, 8, 9)], xlabel = "Poly-Enrich signed -log10 p-value", 
+			   ylabel = "Poly-Enrich Weighted signed -log10 p-value", tfname = "H1-hESC EGR1", mcex = 1.5)
+
+
+#Gm NRSF
+pewres = read.results("./nearest_tss.polyenrich_weighted_signalValue.wgEncodeAwgTfbsHaibGm12878NrsfPcr1xUniPk.narrowPeak_results.tab")
+peres = read.results("./nearest_tss.polyenrich.wgEncodeAwgTfbsHaibGm12878NrsfPcr1xUniPk.narrowPeak_results.tab")
+dev.new(width=4, height=4)
+plot_pval_comp(peres[,c(2, 4, 5, 8, 9)], pewres[,c(2, 4, 5, 8, 9)], xlabel = "Poly-Enrich signed -log10 p-value", 
+			   ylabel = "Poly-Enrich Weighted signed -log10 p-value", tfname = "Gm12878 NRSF", mcex = 1.5)
+
+
+#logsignalvalue for Gm NRSF
+peaks = read.table("./wgEncodeAwgTfbsHaibGm12878NrsfPcr1xUniPk.narrowPeak")
+dev.new(width=4, height=4)
+par(cex.main = 1.5, cex.lab = 1.5)
+hist(log(peaks$V7), xlab="log signalValue",main = "Gm12878 NRSF")
+
+
+```
+
+## Figure 4
+Poly-Enrich vs ChIP-Enrich comparisons
+
+### Figure 4a: Poly-Enrich vs ChIP-Enrich for Gm TBP
+```{r eval = F}
+dev.new(width=4, height=4)
+ceres = read.results("./nearest_tss.chipenrich.wgEncodeAwgTfbsSydhGm12878TbpIggmusUniPk.narrowpeak_results.tab")
+peres = read.results("./nearest_tss.polyenrich.wgEncodeAwgTfbsSydhGm12878TbpIggmusUniPk.narrowpeak_results.tab")
+plot_pval_comp(ceres[,c(2, 4, 5, 8, 9)], peres[,c(2, 4, 5, 8, 9)], xlabel = "ChIP-Enrich signed -log10 p-value", 
+			   ylabel = "Poly-Enrich signed -log10 p-value", tfname = "Gm12878 TBP", mcex = 1.5)
+```
+
+
+### Figure 4b: Poly-Enrich vs ChIP-Enrich heatmap
+
+Creating the "silver standard"
+Positives: Lowest GO terms, parents + grandparents of lowest GO terms
+Ignores: Ancestors of positives, siblings of ancestors and positives, offspring of positives
+Negatives: The rest
+
+
+Data gathering and cleaning. 
+```{r eval = F}
+TF_GOterm_table = read.table("~/Desktop/RESEARCH/TF_GOterm_table.txt", header = T, sep = "\t", stringsAsFactors = F)
+allGOBP = read.table("~/Desktop/RESEARCH/GSsize.txt", sep = "\t", header = T, stringsAsFactors = F)
+
+library(GO.db)
+parents = as.list(GOBPPARENTS)
+ancestor = as.list(GOBPANCESTOR)
+offspring = as.list(GOBPOFFSPRING)
+children = as.list(GOBPCHILDREN)
+
+
+make_validation = function(tf) {
+	TF_GOs = TF_GOterm_table$GOALL[TF_GOterm_table$SYMBOL==tf] #All GO terms for the TF
+	allAncestors = unique(Reduce(c,ancestor[TF_GOs]))          
+	GOnoAncestors = TF_GOs[!(TF_GOs %in% allAncestors)]  #Only keep bottom generation
+	
+	true_positives = union(GOnoAncestors,unique(Reduce(c,parents[GOnoAncestors]))) #Add parents
+	true_positives = union(true_positives,unique(Reduce(c,parents[true_positives]))) #Add grandparents
+	
+	ignores = unique(Reduce(c,parents[true_positives])) #Parents of trues
+	ignores = union(ignores, unique(Reduce(c,children[ignores]))) #Siblings of trues
+	ignores = union(ignores, unique(Reduce(c,ancestor[true_positives]),Reduce(c,offspring[true_positives]))) #Ancestors and offspring of trues
+
+	true_negatives = allGOBP$Geneset.ID[!(allGOBP$Geneset.ID %in% c(true_positives, ignores) )] 
+	
+	return(list(positives = true_positives, negatives = true_negatives))
+}
+
+TFs = names(table(TF_GOterm_table$SYMBOL))
+
+silverStandard = lapply(TFs, make_validation)
+names(silverStandard) = TFs
+#saveRDS(silverStandard, "~/Desktop/RESEARCH/silverStandard/silverStandard.rds")
+```
+
+
+The heatmap only used a TF-GO combo if it was in the "true positive" set. The clustering was then done with Cluster app and JavaTreeView. The finished products are `GOtable_5kb_updated.txt` and `GOtable_nearest_tss_updated.txt`
+
+Gathering data
+```{r eval = F}
+newpeaklist = read.table("./newpeaklist.txt",header=F,stringsAsFactors = F)
+
+read.results <- function(path) {
+	read.table((path),comment.char="",quote="",sep="\t",header=T)
+}
+
+#In ONES, will take all PE and CE results and find difference of PValues, then store in table
+make_GO_table <- function(ldef) {
+	result = read.results("/espresso/leetaiyi/updated_results/5kb.chipenrich.wgEncodeAwgTfbsHaibGm12878Atf3Pcr1xUniPk.narrowPeak_results.tab")
+	bigtable = result[order(result$Geneset.ID),2:3]
+	titles = NULL
+	
+	for (i in 1:nrow(newpeaklist)) {
+		print(i)
+		linecolumn=NULL
+		paths = list.files("/espresso/leetaiyi/updated_results/",pattern=sprintf(".*.%s_results",newpeaklist$V1[i]))
+		if (length(paths)>0) {
+			path_ce <- list.files("/espresso/leetaiyi/updated_results/",pattern=sprintf("%s.chipenrich.%s_results.tab",ldef,newpeaklist$V1[i]))[1]
+			path_pe <- list.files("/espresso/leetaiyi/updated_results/",pattern=sprintf("%s.polyenrich.%s_results.tab",ldef,newpeaklist$V1[i]))[1]
+			
+			if (is.na(path_ce) || is.na(path_pe)) {
+				break
+			}
+			
+			results_ce <- read.table(sprintf("/espresso/leetaiyi/updated_results/%s",path_ce), comment.char="",quote="",sep="\t",header=TRUE)
+			results_nb <- read.table(sprintf("/espresso/leetaiyi/updated_results/%s",path_pe), comment.char="",quote="",sep="\t",header=TRUE)
+			
+			sigpvals = -log10(results_nb[order(results_nb$Geneset.ID),]$P.value)+
+				log10(results_ce[order(results_ce$Geneset.ID),]$P.value)
+			
+			linecolumn = cbind(linecolumn,sigpvals)
+
+		}
+		titles = c(titles, paste(newpeaklist$V2[i],newpeaklist$V4[i],sep=""))
+		bigtable = cbind(bigtable, apply(linecolumn,1,median))
+	}
+	names(bigtable) = c("GO", "Description", titles)
+	write.table(bigtable, sprintf("~/GOtable_%s_updated.txt",ldef),quote=F,sep="\t",row.names = F)
+}
+
+
+#Getting rid of GO terms that do not meet threshold 
+# pthresh is p-value threshold
+# fthresh is number of experiments needed that meet the pthresh
+
+#Chose p=2, f=9 for manuscript
+filter_GOtable <- function(ldef, pthresh, fthresh) {
+	GOtablefull <- read.table(sprintf("./GOtables/GOtable_%s_updated.txt",ldef), sep="\t", header=T, quote="\"")
+	todrop = NULL
+	for (i in 1:nrow(GOtablefull)) {
+		if (sum(abs(GOtablefull[i,3:92])>pthresh)<=fthresh) {
+			todrop=c(todrop,i)
+		}
+	}
+	GOtablefilter = GOtablefull[-todrop,]
+	write.table(GOtablefilter[,-1], sprintf("./GOtable_%s_updated_filtered_%sp_%sf.txt",ldef,pthresh,fthresh),quote=F,sep="\t",row.names = F)
+}
+
+
+```
+
+## Figure 5
+Power Simulations
+
+Required functions and data to load.
+Larger data not included in repository due to size concerns.
+```{r eval = F}
+library(chipenrich)
+
+smallgo = "GO:0070534" #42 genes 
+medgo = "GO:0043410" #471 genes
+
+#Small dataset: 4194 index 65
+peaks_small = "~/Desktop/RESEARCH/ENCODEpeaks/wgEncodeAwgTfbsHaibK562Six5Pcr1xUniPk.narrowPeak"
+
+#Medium dataset: 11129 index 34
+peaks_medium ="~/Desktop/RESEARCH/ENCODEpeaks/wgEncodeAwgTfbsSydhH1hescMaxUcdUniPk.narrowPeak"
+
+#Large dataset: NHEK Keratinocyte ATAC seq, 99478 PMID: 27618450
+ATAC = "~/Desktop/RESEARCH/PE_additions/61592_peaks.bed"
+
+#Largest dataset: 1,094,736
+#Download this from UCSC Genome Browser, link down in Figure 6 comments
+peaks_largest = read.table("~/Desktop/RESEARCH/hgTableswFam.txt", stringsAsFactors = F)
+Alu = peaks_largest[grepl("Alu",peaks_largest$V4),1:3]
+Alu = subset(Alu, !grepl(pattern = "_", x = Alu$V1) )
+colnames(Alu) = c("chr","start","end")
+
+
+just_gam_test <- function(gpw) {
+#	fitspl = mgcv::gam(peak~s(log10_length,bs='cr'),data=gpw,family="binomial")
+#	gpw$splineb = as.numeric(predict(fitspl, gpw, type="terms"))
+#	fitsplnb = mgcv::gam(num_peaks~s(log10_length,bs='cr'),data=gpw,family="nb")
+#	gpw$splinenb = as.numeric(predict(fitsplnb, gpw, type="terms"))
+	
+	sg_go = gpw$peak[gpw$goterm]
+	
+	# Small correction for case where every gene in this geneset has a peak.
+	if (all(as.logical(sg_go))) {
+		cont_length = quantile(gpw$length,0.0025)
+		
+		cont_gene = data.frame(
+			gene_id = "continuity_correction",
+			length = cont_length,
+			log10_length = log10(cont_length),
+			num_peaks = 0,
+			peak = 0,
+			stringsAsFactors = FALSE)
+	#	cont_gene$spline = as.numeric(predict(fitspl, cont_gene, type="terms"))
+	}
+	
+	fitce = mgcv::gam(peak~goterm+s(log10_length,bs='cr'), data=gpw, family="binomial")
+	fitpe = mgcv::gam(num_peaks~goterm+s(log10_length,bs='cr'), data=gpw, family="nb")
+	#binom_p = sum(ppg$length*gpw$goterm) / sum(as.numeric(gpw$length))
+	#fitbin = stats::binom.test(sum(gpw$num_peaks*gpw$goterm), sum(gpw$num_peaks), binom_p, alternative = "greater")
+
+	
+	out = data.frame(
+		"CE_pval" = summary(fitce)$p.table[2,4],
+		"PE_pval" = summary(fitpe)$p.table[2,4],
+		"H_pval" = min(1,2*min(summary(fitce)$p.table[2,4],summary(fitpe)$p.table[2,4])),
+		#"bin_pval" = fitbin$p.value,
+		stringsAsFactors = FALSE)
+	
+	return(out)
+}
+
+randomize_ppg_length = function(ppg) {
+	ppg = ppg[sample(1:nrow(ppg),nrow(ppg)),]
+	ppg = ppg[order(ppg$length),]
+	rownames(ppg) = 1:nrow(ppg)
+	
+	group = floor(as.numeric(rownames(ppg))+99)/100
+	group = floor(group)
+	
+	split_ppg = split(ppg, group)
+	split_ppg = lapply(split_ppg, function(bin){
+		reordering = sample(1:nrow(bin), nrow(bin))
+		
+		data.frame('gene_id'=bin$gene_id, bin[reordering,2:ncol(bin)], stringsAsFactors = FALSE)
+	})
+	ppg = Reduce(rbind, split_ppg)
+	
+	return(ppg)
+}
+
+
+power_test = function(peaks, go_id, method, propextrapeaks = NULL, trials, peakslab = " ") {
+	results = data.frame(matrix("", nrow = trials, ncol = 9), stringsAsFactors = F)
+	colnames(results) = c("dataset","GO","simulation","percentadded",
+						  "CE_pval","PE_pval", "H_pval")
+
+# Make a randomized bylength peaks-per-gene file
+	gpw = peaks2genes(peaks = peaks, out_name = NULL, genome = "hg19", locusdef = "nearest_tss")$peaks_per_gene
+
+	
+	geneset = readRDS("~/Desktop/RESEARCH/gobj.rds")$geneset.GOBP.hsa # List of GOBP terms and their genes
+	go_genes = geneset@set.gene[[go_id]]  # Vector of genes in GO
+	b_genes = gpw$gene_id %in% go_genes
+	n_go_genes = sum(b_genes)
+	for (i in 1:trials) {
+		if(!(i%%100)){print(i)}
+		ppg = randomize_ppg_length(gpw)
+		ppg = cbind(ppg, goterm = as.numeric(b_genes))
+	
+		#Check avg number of peaks per gene
+		meanppg = sum(ppg$peak)/nrow(ppg)
+		#Check avg number of peaks in GO term
+		meanppGO = sum(ppg$goterm*ppg$num_peaks)/n_go_genes
+		#Check number of peaks in GO term
+		numpeaksGO = sum(ppg$goterm*ppg$num_peaks)
+		#Add x% of above peaks to that GO term, weighted by spline fit?
+
+			#Methods:
+			# For CE: add peaks by sampling genes without replacement
+			# 	e.g. If there 100 genes in GO, there are 40 genes with a peak, 
+			# 		add a peak to x% of the remaining 60.
+		GOnopeak = which(ppg$goterm==1 & ppg$peak==0)
+		notGOpeak = which(ppg$goterm==0 & ppg$peak==1)
+		notGOpeak_genes = rep(notGOpeak, ppg$num_peaks[notGOpeak])
+		genesGO = which(ppg$goterm==1)
+		genesnotGO = which(ppg$goterm==0)
+		n_GOnopeak = length(GOnopeak)
+		
+		if (method == "CEbias") {
+			nsample = floor(propextrapeaks*n_GOnopeak)
+			peakindices=sample(GOnopeak,nsample)
+			ppg$peak[peakindices] = 1
+			ppg$num_peaks[peakindices] = 1
+		}  else if (method == "balanced") {# Balanced: add peaks by num peaks spline fit
+			fitsplnb = mgcv::gam(peak~s(log10_length,bs='cr'),data=ppg,family="nb")
+			fitsplinenb = as.numeric(fitted(fitsplnb, ppg, type="terms"))
+			nsample = floor(propextrapeaks*numpeaksGO)
+			peakindices = sample(genesGO, nsample, prob = fitsplinenb[genesGO],replace = T)
+			uniqpeaks = as.numeric(names(table(peakindices)))
+			peakcounts = as.numeric(table(peakindices))
+			ppg$peak[uniqpeaks] = 1
+			ppg$num_peaks[uniqpeaks] = ppg$num_peaks[uniqpeaks]+peakcounts
+		} else if (method == "PEbias") { # For PE: add n# peaks (x% of peaks in GO term) to n/3 genes and one for n/8
+			nsample = floor(propextrapeaks*sum(ppg$goterm))
+			genesample=sample(genesGO,max(1,floor(length(genesGO)/12)))
+			peakindices = sample(genesample, nsample, replace=T)
+			uniqpeaks = as.numeric(names(table(peakindices)))
+			peakcounts = as.numeric(table(peakindices))
+			ppg$peak[uniqpeaks] = 1
+			ppg$num_peaks[uniqpeaks] = ppg$num_peaks[uniqpeaks]+peakcounts
+		}
+		
+		enrichresults = just_gam_test(ppg)
+		results[i,1] = peakslab
+		results[i,2] = go_id
+		results[i,3] = method
+		results[i,4:8] = c(propextrapeaks,
+						enrichresults
+						)
+	}
+	return(results)
+
+}
+
+```
+
+
+Running the simulations
+```{r eval = F}
+peakss = c( "peaks_small","peaks_medium")
+peakslabs = c("wgEncodeAwgTfbsHaibK562Six5Pcr1xUniPk.narrowPeak",
+			  "wgEncodeAwgTfbsSydhH1hescMaxUcdUniPk.narrowPeak")
+N = 1000
+for (i in 1:2) {
+	peaks = get(peakss[i])
+	peakslab = peakslabs[i]
+	for (goid in c(smallgo,medgo)) {
+		for (method in c("CEbias","PEbias","balanced")) {
+			for (propextrapeaks in c(0.05,0.1,0.2,0.3)) {
+				print(sprintf("~/Desktop/RESEARCH/powersims/powersim_%s_%s_%s_%s_%s.rds", peakslab, goid, method, propextrapeaks, N))
+				if (!file.exists(sprintf("~/Desktop/RESEARCH/powersims/powersim_%s_%s_%s_%s_%s.rds", peakslab, goid, method, propextrapeaks, N))) {
+				suppressWarnings({
+				powtest = power_test(peaks, goid, method, propextrapeaks ,N,peakslab)})
+				saveRDS(powtest, sprintf("~/Desktop/RESEARCH/powersims/powersim_%s_%s_%s_%s_%s.rds", peakslab, goid, method, propextrapeaks, N))
+				}
+			}
+		}
+	}
+	
+}
+
+```
+
+Creating the plots
+```{r eval = F}
+get_powersim_bar_withH <- function(tf, go, alpha=0.05) {
+	n=1000
+	#	alpha = 0.001
+	setwd("~/Desktop/RESEARCH/")
+	
+	pC005 = readRDS(sprintf("./powersims/powersim_%s_%s_CEbias_0.05_1000.rds",tf,go))
+	pC01 = readRDS(sprintf("./powersims/powersim_%s_%s_CEbias_0.1_1000.rds",tf,go))
+	pC02 = readRDS(sprintf("./powersims/powersim_%s_%s_CEbias_0.2_1000.rds",tf,go))
+	pC03 = readRDS(sprintf("./powersims/powersim_%s_%s_CEbias_0.3_1000.rds",tf,go))
+	
+	pP005 = readRDS(sprintf("./powersims/powersim_%s_%s_PEbias_0.05_1000.rds",tf,go))
+	pP01 = readRDS(sprintf("./powersims/powersim_%s_%s_PEbias_0.1_1000.rds",tf,go))
+	pP02 = readRDS(sprintf("./powersims/powersim_%s_%s_PEbias_0.2_1000.rds",tf,go))
+	pP03 = readRDS(sprintf("./powersims/powersim_%s_%s_PEbias_0.3_1000.rds",tf,go))
+	
+	pB005 = readRDS(sprintf("./powersims/powersim_%s_%s_balanced_0.05_1000.rds",tf,go))
+	pB01 = readRDS(sprintf("./powersims/powersim_%s_%s_balanced_0.1_1000.rds",tf,go))
+	pB02 = readRDS(sprintf("./powersims/powersim_%s_%s_balanced_0.2_1000.rds",tf,go))
+	pB03 = readRDS(sprintf("./powersims/powersim_%s_%s_balanced_0.3_1000.rds",tf,go))
+	
+	CC005_power = c(sum(as.numeric(pC005$CE_pval) < alpha)/n, 
+					sum(as.numeric(pC01$CE_pval) < alpha)/n,
+					sum(as.numeric(pC02$CE_pval) < alpha)/n, 
+					sum(as.numeric(pC03$CE_pval) < alpha)/n)
+	CP005_power = c(sum(as.numeric(pC005$PE_pval) < alpha)/n, 
+					sum(as.numeric(pC01$PE_pval) < alpha)/n, 
+					sum(as.numeric(pC02$PE_pval) < alpha)/n, 
+					sum(as.numeric(pC03$PE_pval) < alpha)/n)
+	CH005_power = c(sum(as.numeric(pC005$H_pval) < alpha)/n, 
+					sum(as.numeric(pC01$H_pval) < alpha)/n, 
+					sum(as.numeric(pC02$H_pval) < alpha)/n, 
+					sum(as.numeric(pC03$H_pval) < alpha)/n)
+	PC005_power = c(sum(as.numeric(pP005$CE_pval) < alpha)/n, 
+					sum(as.numeric(pP01$CE_pval) < alpha)/n, 
+					sum(as.numeric(pP02$CE_pval) < alpha)/n, 
+					sum(as.numeric(pP03$CE_pval) < alpha)/n)
+	PP005_power = c(sum(as.numeric(pP005$PE_pval) < alpha)/n, 
+					sum(as.numeric(pP01$PE_pval) < alpha)/n, 
+					sum(as.numeric(pP02$PE_pval) < alpha)/n, 
+					sum(as.numeric(pP03$PE_pval) < alpha)/n)
+	PH005_power = c(sum(as.numeric(pP005$H_pval) < alpha)/n, 
+					sum(as.numeric(pP01$H_pval) < alpha)/n, 
+					sum(as.numeric(pP02$H_pval) < alpha)/n, 
+					sum(as.numeric(pP03$H_pval) < alpha)/n)
+	BC005_power = c(sum(as.numeric(pB005$CE_pval) < alpha)/n, 
+					sum(as.numeric(pB01$CE_pval) < alpha)/n, 
+					sum(as.numeric(pB02$CE_pval) < alpha)/n, 
+					sum(as.numeric(pB03$CE_pval) < alpha)/n)
+	BP005_power = c(sum(as.numeric(pB005$PE_pval) < alpha)/n, 
+					sum(as.numeric(pB01$PE_pval) < alpha)/n, 
+					sum(as.numeric(pB02$PE_pval) < alpha)/n, 
+					sum(as.numeric(pB03$PE_pval) < alpha)/n)
+	BH005_power = c(sum(as.numeric(pB005$H_pval) < alpha)/n, 
+					sum(as.numeric(pB01$H_pval) < alpha)/n, 
+					sum(as.numeric(pB02$H_pval) < alpha)/n, 
+					sum(as.numeric(pB03$H_pval) < alpha)/n)
+	
+	data = c(CC005_power[1],CP005_power[1],CH005_power[1],0,
+			 CC005_power[2],CP005_power[2],CH005_power[2],0,
+			 CC005_power[3],CP005_power[3],CH005_power[3],0,
+			 CC005_power[4],CP005_power[4],CH005_power[4],0,0,
+			 PC005_power[1],PP005_power[1],PH005_power[1],0,
+			 PC005_power[2],PP005_power[2],PH005_power[2],0,
+			 PC005_power[3],PP005_power[3],PH005_power[3],0,
+			 PC005_power[4],PP005_power[4],PH005_power[4],0,0,
+			 BC005_power[1],BP005_power[1],BH005_power[1],0,
+			 BC005_power[2],BP005_power[2],BH005_power[2],0,
+			 BC005_power[3],BP005_power[3],BH005_power[3],0,
+			 BC005_power[4],BP005_power[4],BH005_power[4])
+	
+	cols = rep(c("blue","red","gold","white"),4)
+	
+	barplot(data, col = c(cols,"white",cols,"white",cols), ylim=c(0,1))
+	
+	
+}
+
+get_powersim_bar_withH("wgEncodeAwgTfbsHaibK562Six5Pcr1xUniPk.narrowPeak",smallgo)
+get_powersim_bar_withH("wgEncodeAwgTfbsSydhH1hescMaxUcdUniPk.narrowPeak",smallgo)
+get_powersim_bar_withH("wgEncodeAwgTfbsSydhK562JundIggrabUniPk.narrowPeak",smallgo)
+get_powersim_bar_withH("wgEncodeAwgTfbsHaibK562Six5Pcr1xUniPk.narrowPeak",medgo)
+get_powersim_bar_withH("wgEncodeAwgTfbsSydhH1hescMaxUcdUniPk.narrowPeak",medgo)
+get_powersim_bar_withH("wgEncodeAwgTfbsSydhK562JundIggrabUniPk.narrowPeak",medgo)
+
+get_powersim_bar_withH("wgEncodeAwgTfbsHaibK562Six5Pcr1xUniPk.narrowPeak",smallgo,0.001)
+get_powersim_bar_withH("wgEncodeAwgTfbsSydhH1hescMaxUcdUniPk.narrowPeak",smallgo,0.001)
+get_powersim_bar_withH("wgEncodeAwgTfbsSydhK562JundIggrabUniPk.narrowPeak",smallgo,0.001)
+get_powersim_bar_withH("wgEncodeAwgTfbsHaibK562Six5Pcr1xUniPk.narrowPeak",medgo,0.001)
+get_powersim_bar_withH("wgEncodeAwgTfbsSydhH1hescMaxUcdUniPk.narrowPeak",medgo,0.001)
+get_powersim_bar_withH("wgEncodeAwgTfbsSydhK562JundIggrabUniPk.narrowPeak",medgo,0.001)
+
+
+```
+
+
+
+
+## Figure 6
+Repetitive elements
+
+The data: hgTableswFam.txt is from the UCSC genome browser:
+http://genome.ucsc.edu/cgi-bin/hgTables?hgsid=611299015_553ds6IAQxOgmDS4cIb3Nslq5YrJ&boolshad.hgta_printCustomTrackHeaders=0&hgta_ctName=tb_rmskJoinedBaseline&hgta_ctDesc=table+browser+query+on+rmskJoinedBaseline&hgta_ctVis=pack&hgta_ctUrl=&fbQual=whole&fbUpBases=200&fbDownBases=200&hgta_doGetBed=get+BED
+
+Poly-Enrich was run on the Alu and L1 families on nearest_tss, 5kb, intron, exon locus definitions
+```{r eval = F}
+family = "Alu" # or L1
+
+	peaks = read.table("./hgTableswFam.txt", sep="\t", comment.char="", stringsAsFactors = F)
+	peakssub = subset(peaks,sapply(strsplit(peaks$V4,"/"),function(x){x[2]==family}),select = c(V1,V2,V3))
+	peakssub = subset(peakssub, !grepl(pattern = "_", x = peakssub$V1) )
+	
+	names(peakssub)[1:3] = c("chr","start","end")
+
+	polyenrich(
+		peaks = peakssub[,1:3],
+		out_name = sprintf("%s.%s.RE%s",ldef,"polyenrich",family),
+		out_path = '.',
+		genome = "hg38",
+		genesets = "GOBP",
+		locusdef = "nearest_tss",
+		method = "polyenrich",
+		qc_plots = F,
+		max_geneset_size = 2000,
+		n_cores=10
+	)
+```
+
+Data was aggregated into a table with rows being GOterms and columns being the family/locus definition combination. The table was then ran through the Cluster and Java TreeView applications, but here is the aggregated raw table
+```{r eval = F}
+REtable = read.table("./REtable.txt", sep = "\t", stringsAsFactors = F, header = T, quote = "")
+```
+
+
+###Supplementary Figure 1
+Spline comparisons
+
+Locus length spline
+The package needs to be loaded through `load_all` due to requiring hidden functions.
+```{r eval = F}
+ppg = read.table("~/Desktop/RESEARCH/updated_results/nearest_tss.chipenrich.wgEncodeAwgTfbsHaibH1hescYy1sc281V0416102UniPk.narrowPeak_peaks-per-gene.tab", header = T)
+ppg = ppg[order(ppg$log10_length),]
+ppg$group = ceiling((1:nrow(ppg)/25))
+
+avg_binned_peak = function(gpw) {
+	bygroup = stats::aggregate(cbind(peak, length) ~ group, gpw, mean)
+	bygroup$log_avg_length = log10(bygroup$length)
+	names(bygroup) = c("group", "peak", "avg_length", "log_avg_length")
+	
+	return(bygroup)
+}
+
+avg_binned_numpeaks = function(gpw) {
+	bygroup = stats::aggregate(cbind(num_peaks, length) ~ group, gpw, mean)
+	bygroup$log_avg_length = log10(bygroup$length)
+	names(bygroup) = c("group", "num_peaks", "avg_length", "log_avg_length")
+	
+	return(bygroup)
+}
+
+GOid = "GO:0005856"
+
+avg_bins_peaks = avg_binned_peak(ppg)
+avg_bins_numpeaks = avg_binned_numpeaks(ppg)
+
+fitC = mgcv::gam(peak ~ s(log10_length, bs = 'cr'), data = ppg, family = "binomial")
+fitP = mgcv::gam(num_peaks ~ s(log10_length, bs = 'cr'), data = ppg, family = "nb")
+ppg$fitted_peaks = fitted(fitC, ppg)
+ppg$fitted_numpeaks = fitted(fitP, ppg)
+
+devtools::load_all("~/GitHub/chipenrich/")
+
+genome = "hg19"
+genesets = c("GOBP","GOMF","GOCC")
+locusdef = "5kb"
+weighting = NULL
+mappability = NULL
+min_geneset_size = 10
+max_geneset_size = 2000
+randomization = NULL
+
+ldef_list = lapply(locusdef, function(x){setup_locusdef(x, genome, randomization)})
+ldef = lapply(ldef_list, function(x){x[['ldef']]})
+tss = lapply(ldef_list, function(x){x[['tss']]})
+
+geneset_list = lapply(ldef, function(x){
+	setup_genesets(gs_codes = genesets, ldef_obj = x, genome = genome, min_geneset_size = min_geneset_size, max_geneset_size = max_geneset_size)
+})
+
+mappa = lapply(1:length(locusdef), function(i){
+	setup_mappa(mappa_code = mappability, genome = genome, ldef_code = locusdef[i], ldef_obj = ldef[[i]])
+})
+
+gobj = geneset_list[[1]]
+go_genes = geneset@set.gene[["GO:0003008"]];
+
+# Filter genes in the geneset to only those in the gpw table.
+# The gpw table will be truncated depending on which geneset type we're in.
+go_genes = go_genes[go_genes %in% ppg$gene_id];
+
+# Background genes and the background presence of a peak
+b_genes = ppg$gene_id %in% go_genes;
+
+ppg=cbind(ppg,goterm=as.numeric(b_genes))
+
+fitCG =  mgcv::gam(peak~goterm + s(log10_length,bs='cr'),data=ppg,family="binomial")
+fitPG =  mgcv::gam(num_peaks~goterm + s(log10_length,bs='cr'),data=ppg,family="nb")
+
+ppg$fitted_peaks_G = fitted(fitCG, ppg)
+ppg$fitted_numpeaks_G = fitted(fitPG, ppg)
+
+plot(avg_bins_peaks$log_avg_length, avg_bins_peaks$peak, ylab = "Prop Genes with at Least 1 Peak",
+	 xlab = "Avg log10 locus length (per bin of 25)", pch = 20, cex.lab = 1.6)
+lines(ppg$log10_length[order(ppg$log10_length,decreasing = F)][ppg$goterm==0], ppg$fitted_peaks[ppg$goterm==0], col= "red")
+lines(ppg$log10_length[order(ppg$log10_length,decreasing = F)][ppg$goterm==0], ppg$fitted_peaks_G[ppg$goterm==0], col= "blue")
+
+
+plot(avg_bins_numpeaks$log_avg_length, avg_bins_numpeaks$num_peaks, ylab = "Avg Number of Peaks",
+	 xlab = "Avg log10 locus length (per bin of 25)", pch = 20, cex.lab = 1.6)
+lines(ppg$log10_length[order(ppg$log10_length,decreasing = F)][ppg$goterm==0], ppg$fitted_numpeaks[ppg$goterm==0], col= "red")
+lines(ppg$log10_length[order(ppg$log10_length,decreasing = F)][ppg$goterm==0], ppg$fitted_numpeaks_G[ppg$goterm==0], col= "blue")
+
+
+```
+
+
+
+###Supplementary Figure 2
+Type 1 error
+
+The data files are aggregates from all the permutations, which are not in the repository for size concerns.
+```{r eval = F}
+newpeaklist = read.table("~/Desktop/RESEARCH/newpeaklist.txt",header = F, stringsAsFactors = F)
+thresh = 0.05
+rndmat = matrix(0,90,6)
+for (index in 1:90) {
+	rnds = read.table(sprintf("~/Desktop/RESEARCH/rnds/rnds2019.._%s_nearest_tss_polyenrich.txt",newpeaklist$V1[index]))
+	rndmat[index,] = colSums(rnds < thresh)/nrow(rnds)
+}
+boxplot(rndmat[,1:3], main = "Nearest TSS Polyenrich", ylim = c(0,0.1), names = c("complete","bylength","bylocation"))
+abline(h=0.05, col = "red")
+
+
+thresh = 0.001
+rndmat = matrix(0,90,6)
+for (index in 1:90) {
+	rnds = read.table(sprintf("~/Desktop/RESEARCH/rnds/rnds2019.._%s_nearest_tss_polyenrich.txt",newpeaklist$V1[index]))
+	rndmat[index,] = colSums(rnds < thresh)/nrow(rnds)
+	if (sum(rnds$rndloc<thresh) > 8*nrow(rnds)*thresh) {print(index)} # Looking for the largest inflated ones
+}
+boxplot(rndmat[,1:3], main = "Nearest TSS Polyenrich", ylim = c(0,0.01), names = c("complete","bylength","bylocation"))
+abline(h=thresh, col = "red")
+
+```
+
+###Supplementary Figure 3:
+Extra Power simulations
+
+Data is same as from [Figure 5](#figure-5)
+
+3A and 3B are identical to Figure 5 except without the yellow hybrid bars.
+
+Addendum plot for larger data sets
+```{r eval = F}
+get_powersim_large = function(tf, go , alpha = 0.05) { 
+	setwd("~/Desktop/RESEARCH/")
+	pB005 = readRDS(sprintf("./powersims/powersim.mini_%s_%s_balanced_0.05_500.rds",tf,go))
+	pB01 = readRDS(sprintf("./powersims/powersim.mini_%s_%s_balanced_0.1_500.rds",tf,go))
+	pB02 = readRDS(sprintf("./powersims/powersim.mini_%s_%s_balanced_0.2_500.rds",tf,go))
+	pB03 = readRDS(sprintf("./powersims/powersim.mini_%s_%s_balanced_0.3_500.rds",tf,go))
+	
+	n = 500
+	
+	BC005_power = c(sum(as.numeric(pB005$CE_pval) < alpha)/n, 
+					sum(as.numeric(pB01$CE_pval) < alpha)/n, 
+					sum(as.numeric(pB02$CE_pval) < alpha)/n, 
+					sum(as.numeric(pB03$CE_pval) < alpha)/n)
+	BP005_power = c(sum(as.numeric(pB005$PE_pval) < alpha)/n, 
+					sum(as.numeric(pB01$PE_pval) < alpha)/n, 
+					sum(as.numeric(pB02$PE_pval) < alpha)/n, 
+					sum(as.numeric(pB03$PE_pval) < alpha)/n)
+
+	data = c(BC005_power[1],BP005_power[1],0,
+			 BC005_power[2],BP005_power[2],0,
+			 BC005_power[3],BP005_power[3],0,
+			 BC005_power[4],BP005_power[4])
+	
+	cols = rep(c("blue","red","white"),4)
+	
+	barplot(data, col = c(cols,"white",cols,"white",cols), ylim=c(0,1))
+
+	
+}
+par(mfrow = c(2,2), mar = c(2,2.3,1,1))
+get_powersim_large("large",smallgo, 0.05)
+get_powersim_large("largest",smallgo, 0.05)
+get_powersim_large("large",medgo, 0.05)
+get_powersim_large("largest",medgo, 0.05)
+```
+
+
+###Supplementary Figure 4
+Validations between ChIP-Enrich, Poly-Enrich, and GREAT
+
+All data is from [Figure 4](#figure-4)
+
+```{r eval = F} 
+newpeaklist = read.table("~/Box Sync/EnhancerProject/newpeaklist 20191203.txt",sep = "\t", stringsAsFactors = F)
+TF_GOterm_table = read.table("~/Desktop/RESEARCH/TF_GOterm_table.txt", header = T, sep = "\t", stringsAsFactors = F)
+#silverStandard_TAS = readRDS("~/Desktop/RESEARCH/silverStandard/silverStandardTAS.rds")
+# We did not use TAS only as the number of true positives becomes extremely low.
+silverStandardNew = readRDS("~/Desktop/RESEARCH/silverStandard/silverStandardNew.rds")
+
+TFs = intersect(names(table(TF_GOterm_table$SYMBOL)), names(silverStandardNew))
+
+read.results <- function(path) {
+  read.table((path),comment.char="",quote="",sep="\t",header=T)
+}
+
+validate_TF = function(tf, silverStandard) {
+
+	# Reading in the data for all three cell lines, if they exist.
+	CE.res = NULL
+	PE.res = NULL
+	GR.res = NULL
+	
+	print(tf)
+	for (cell in c("Gm12878","H1hesc","K562")) {  
+		if (length(newpeaklist$V1[newpeaklist$V7 == tf & newpeaklist$V2 == cell])>0) {
+			CE.res = rbind(CE.res,
+				read.results(sprintf("~/Desktop/RESEARCH/updated_results/nearest_tss/nearest_tss.chipenrich.%s_results.tab",newpeaklist$V1[newpeaklist$V7 == tf & newpeaklist$V2 == cell])))
+			PE.res = rbind(PE.res,
+				read.results(sprintf("~/Desktop/RESEARCH/updated_results/nearest_tss/nearest_tss.polyenrich.%s_results.tab",newpeaklist$V1[newpeaklist$V7 == tf & newpeaklist$V2 == cell])))
+			GR.res = rbind(GR.res,
+				read.results(sprintf("~/Desktop/RESEARCH/updated_results/nearest_tss/nearest_tss.binomial.%s_results.tab",newpeaklist$V1[newpeaklist$V7 == tf & newpeaklist$V2 == cell])))
+		}	
+	}
+	
+	find_similar_GOs <- function(silverStandardSet, doNotInclude) {
+	availables = (1:nrow(resultsGOs_sort))[-which(resultsGOs_sort$Geneset.ID %in% c(doNotInclude,silverStandardSet))]
+	falseSet = rep("0", length(silverStandardSet))
+	
+	for (i in 1:length(silverStandardSet)) {
+		GO = silverStandardSet[i]
+		lengthindex = which(GO == resultsGOs_sort$Geneset.ID)
+		falseGO = sample(intersect(lengthindex+((-(min(24,lengthindex-1))):min(24,nrow(resultsGOs_sort)-lengthindex-1)), availables),1)
+		availables = availables[-which(falseGO == availables)]
+		falseSet[i] = resultsGOs_sort$Geneset.ID[falseGO]
+	}
+	return(falseSet)
+}
+	
+	
+	
+	validation = NULL
+	for (method in c("CE","PE","GR")) {
+		Mres = get(sprintf("%s.res",method))
+	
+		TF_pos = intersect(silverStandard[[tf]]$positives,unique(Mres$Geneset.ID))
+		TF_neg = intersect(silverStandard[[tf]]$negatives,unique(Mres$Geneset.ID))
+
+		t_pos = sum(Mres$Geneset.ID %in% TF_pos)
+		n_pos = sum(Mres$FDR[Mres$Geneset.ID %in% TF_pos]<0.05)
+		t_neg = sum(Mres$Geneset.ID %in% TF_neg)
+		n_neg = sum(Mres$FDR[Mres$Geneset.ID %in% TF_neg]<0.05)*t_pos/t_neg ## To adjust for the difference in sizes
+		#precision = n_pos/(n_pos+n_neg)
+		#recall = n_pos/t_pos
+		FDR = n_neg/(n_pos+n_neg)
+		#F1 = 2*(precision*recall)/(precision+recall)
+		validation[[method]] = FDR
+	}
+	
+	return(validation)
+
+}
+
+validations = lapply(TFs, function(tf) {validate_TF(tf, silverStandardNew)})
+
+validations = do.call(rbind, validations)
+
+#saveRDS(validations, "~/Desktop/RESEARCH/silverStandardValidations.rds")
+```
+
+
+Making the plots
+```{r eval = F}
+validations = readRDS("~/Desktop/RESEARCH/silverStandardValidations.rds")
+#Only want the TFs with over XX true positives
+TPthresh=50
+indexfilter = sapply(silverStandardNew, function(x){length(x$positives)>=TPthresh})
+validations = validations[indexfilter,]
+plot(-1,ylim = c(0,0.6), xlim = c(1,3), ylab = "Empirical False Positive Rate", xlab = "Method", xaxt = "n")
+for (i in 1:nrow(validations)) {
+	cols = ifelse(validations[i,3]>max(validations[i,c(1,2)]),"red","black")
+
+	lines(validations[i,c(1,3,2)], type = "b", col = cols, pch = 1)
+}
+axis(side = 1, at = c(1,2,3), labels = c("CE","GREAT","PE"))
+```
+
+
+###Supplementary Figure 5?
+Nearest TSS version of ChIP-Enrich and Poly-Enrich comparison
+
+Procedure and data is the same as in [Figure 4](#figure-4)
+
+###Supplementary Figure 6
+Just a subset of data from [Figure 6](#figure-6)
+
+
+###Supplementary Figure 7
+Comparison between Poly-Enrich and Broad-Enrich
+
+Running analysis. Data already provided in repository.
+```{r eval = F}
+library(chipenrich)
+out = polyenrich(peaks = "./wgEncodeBroadHistoneGm12878H3k4me1StdPk.broadPeak",
+				 out_name = NULL,
+				 out_path = NULL,
+				 genome = "hg19",
+				 genesets = "GOBP",
+				 locusdef = "nearest_tss",
+				 method = "polyenrich",
+				 qc_plots = FALSE,
+				 max_geneset_size = 2000,
+				 n_cores = 1)  
+saveRDS(out, sprintf("./nearest_tss.polyenrich.wgEncodeBroadHistoneGm12878H3k4me1StdPk.broadPeak.rds"))
+
+out = broadenrich(peaks = "./wgEncodeBroadHistoneGm12878H3k4me1StdPk.broadPeak",
+				 out_name = NULL,
+				 out_path = NULL,
+				 genome = "hg19",
+				 genesets = "GOBP",
+				 locusdef = "nearest_tss",
+				 qc_plots = FALSE,
+				 max_geneset_size = 2000,
+				 n_cores = 1)  
+saveRDS(out, sprintf("./nearest_tss.broadenrich.wgEncodeBroadHistoneGm12878H3k4me1StdPk.broadPeak.rds"))
+
+out = polyenrich(peaks = "./wgEncodeBroadHistoneGm12878H3k4me3StdPk.broadPeak",
+				 out_name = NULL,
+				 out_path = NULL,
+				 genome = "hg19",
+				 genesets = "GOBP",
+				 locusdef = "nearest_tss",
+				 method = "polyenrich",
+				 qc_plots = FALSE,
+				 max_geneset_size = 2000,
+				 n_cores = 1)  
+saveRDS(out, sprintf("./nearest_tss.polyenrich.wgEncodeBroadHistoneGm12878H3k4me3StdPk.broadPeak.rds"))
+
+out = broadenrich(peaks = "./wgEncodeBroadHistoneGm12878H3k4me3StdPk.broadPeak",
+				 out_name = NULL,
+				 out_path = NULL,
+				 genome = "hg19",
+				 genesets = "GOBP",
+				 locusdef = "nearest_tss",
+				 qc_plots = FALSE,
+				 max_geneset_size = 2000,
+				 n_cores = 1)  
+saveRDS(out, sprintf("./nearest_tss.broadenrich.wgEncodeBroadHistoneGm12878H3k4me3StdPk.broadPeak.rds"))
+
+
+```
+
+Making plots
+
+`plot_pval_comp` at common functions at the top of [Figs and Tables](#figs-and-tables)
+```{r eval = F}
+setwd("~/GitHub/polyenrich/SFig7/")
+
+histPE = readRDS("./nearest_tss.polyenrich.wgEncodeBroadHistoneGm12878H3k4me1StdPk.broadPeak.rds")$results[,c(2, 4, 5, 8, 9)]
+histBE = readRDS("./nearest_tss.broadenrich.wgEncodeBroadHistoneGm12878H3k4me1StdPk.broadPeak.rds")$results[,c(2, 4, 5, 8, 9)]
+plot_pval_comp(histBE,histPE, "BE","PE", "Gm12878 H3k4me1" )
+histPE = readRDS("./nearest_tss.polyenrich.wgEncodeBroadHistoneGm12878H3k4me3StdPk.broadPeak.rds")$results[,c(2, 4, 5, 8, 9)]
+histBE = readRDS("./nearest_tss.broadenrich.wgEncodeBroadHistoneGm12878H3k4me3StdPk.broadPeak.rds")$results[,c(2, 4, 5, 8, 9)]
+plot_pval_comp(histBE,histPE, "BE","PE", "Gm12878 H3k4me3")
+```
+
+
+
