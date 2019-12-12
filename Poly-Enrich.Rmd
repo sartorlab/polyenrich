@@ -8,13 +8,6 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-### Set work directory here, if needed.
-
-All other paths in code blocks are likely to require changing.
-```{r}
-setwd(".")
-```
-
 # Table of Contents
 
 * [Running analysis](#running-analysis)
@@ -35,9 +28,8 @@ setwd(".")
 
 The [Figs and Tables](#figs-and-tables) section have downloads for already complete and cleaned analysis if you do not want to do that yourself.
 
-Download Supplementary Table 1 and place in working directory before proceeding.
 ```{r eval = F}
-newpeaklist = gdata::read.xls("./Supplementary Table 1.xlsx", stringsAsFactors=F)
+newpeaklist = read.table("./Fig4/newpeaklist 20191203.txt", header=F, sep="\t",stringsAsFactors = F)
 ```
 
 ##### To download all the ENCODE ChIP-seq experiments used, follow this procedure:
