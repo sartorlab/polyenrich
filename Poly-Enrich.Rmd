@@ -208,31 +208,31 @@ Poly-Enrich vs Poly-Enrich weighted
 ```{r eval = F}
 # PE vs PEW signed QQ plots
 #Gm TAF1
-pewres = read.results("./nearest_tss.polyenrich_weighted_signalValue.wgEncodeAwgTfbsHaibGm12878Taf1Pcr1xUniPk.narrowPeak_results.tab")
-peres =  read.results("./nearest_tss.polyenrich.wgEncodeAwgTfbsHaibGm12878Taf1Pcr1xUniPk.narrowPeak_results.tab")
+pewres = read.results("./Fig3/nearest_tss.polyenrich_weighted_signalValue.wgEncodeAwgTfbsHaibGm12878Taf1Pcr1xUniPk.narrowPeak_results.tab")
+peres =  read.results("./Fig3/nearest_tss.polyenrich.wgEncodeAwgTfbsHaibGm12878Taf1Pcr1xUniPk.narrowPeak_results.tab")
 dev.new(width=4, height=4)
 plot_pval_comp(peres[,c(2, 4, 5, 8, 9)], pewres[,c(2, 4, 5, 8, 9)], xlabel = "Poly-Enrich signed -log10 p-value", 
 			   ylabel = "Poly-Enrich Weighted signed -log10 p-value", tfname = "Gm12878 TAF1", mcex = 1.5)
 
 
 #H1 EGR1
-pewres = read.results("./nearest_tss.polyenrich_weighted_signalValue.wgEncodeAwgTfbsHaibH1hescEgr1V0416102UniPk.narrowPeak_results.tab")
-peres = read.results("./PEWresults/nearest_tss.polyenrich.wgEncodeAwgTfbsHaibH1hescEgr1V0416102UniPk.narrowPeak_results.tab")
+pewres = read.results("./Fig3/nearest_tss.polyenrich_weighted_signalValue.wgEncodeAwgTfbsHaibH1hescEgr1V0416102UniPk.narrowPeak_results.tab")
+peres = read.results("./Fig3/nearest_tss.polyenrich.wgEncodeAwgTfbsHaibH1hescEgr1V0416102UniPk.narrowPeak_results.tab")
 dev.new(width=4, height=4)
 plot_pval_comp(peres[,c(2, 4, 5, 8, 9)], pewres[,c(2, 4, 5, 8, 9)], xlabel = "Poly-Enrich signed -log10 p-value", 
 			   ylabel = "Poly-Enrich Weighted signed -log10 p-value", tfname = "H1-hESC EGR1", mcex = 1.5)
 
 
 #Gm NRSF
-pewres = read.results("./nearest_tss.polyenrich_weighted_signalValue.wgEncodeAwgTfbsHaibGm12878NrsfPcr1xUniPk.narrowPeak_results.tab")
-peres = read.results("./nearest_tss.polyenrich.wgEncodeAwgTfbsHaibGm12878NrsfPcr1xUniPk.narrowPeak_results.tab")
+pewres = read.results("./Fig3/nearest_tss.polyenrich_weighted_signalValue.wgEncodeAwgTfbsHaibGm12878NrsfPcr1xUniPk.narrowPeak_results.tab")
+peres = read.results("./Fig3/nearest_tss.polyenrich.wgEncodeAwgTfbsHaibGm12878NrsfPcr1xUniPk.narrowPeak_results.tab")
 dev.new(width=4, height=4)
 plot_pval_comp(peres[,c(2, 4, 5, 8, 9)], pewres[,c(2, 4, 5, 8, 9)], xlabel = "Poly-Enrich signed -log10 p-value", 
 			   ylabel = "Poly-Enrich Weighted signed -log10 p-value", tfname = "Gm12878 NRSF", mcex = 1.5)
 
 
 #logsignalvalue for Gm NRSF
-peaks = read.table("./wgEncodeAwgTfbsHaibGm12878NrsfPcr1xUniPk.narrowPeak")
+peaks = read.table("./Fig3/wgEncodeAwgTfbsHaibGm12878NrsfPcr1xUniPk.narrowPeak")
 dev.new(width=4, height=4)
 par(cex.main = 1.5, cex.lab = 1.5)
 hist(log(peaks$V7), xlab="log signalValue",main = "Gm12878 NRSF")
@@ -246,8 +246,8 @@ Poly-Enrich vs ChIP-Enrich comparisons
 ### Figure 4a: Poly-Enrich vs ChIP-Enrich for Gm TBP
 ```{r eval = F}
 dev.new(width=4, height=4)
-ceres = read.results("./nearest_tss.chipenrich.wgEncodeAwgTfbsSydhGm12878TbpIggmusUniPk.narrowpeak_results.tab")
-peres = read.results("./nearest_tss.polyenrich.wgEncodeAwgTfbsSydhGm12878TbpIggmusUniPk.narrowpeak_results.tab")
+ceres = read.results("./Fig4/nearest_tss.chipenrich.wgEncodeAwgTfbsSydhGm12878TbpIggmusUniPk.narrowpeak_results.tab")
+peres = read.results("./Fig4/nearest_tss.polyenrich.wgEncodeAwgTfbsSydhGm12878TbpIggmusUniPk.narrowpeak_results.tab")
 plot_pval_comp(ceres[,c(2, 4, 5, 8, 9)], peres[,c(2, 4, 5, 8, 9)], xlabel = "ChIP-Enrich signed -log10 p-value", 
 			   ylabel = "Poly-Enrich signed -log10 p-value", tfname = "Gm12878 TBP", mcex = 1.5)
 ```
@@ -263,8 +263,8 @@ Negatives: The rest
 
 Data gathering and cleaning. 
 ```{r eval = F}
-TF_GOterm_table = read.table("~/Desktop/RESEARCH/TF_GOterm_table.txt", header = T, sep = "\t", stringsAsFactors = F)
-allGOBP = read.table("~/Desktop/RESEARCH/GSsize.txt", sep = "\t", header = T, stringsAsFactors = F)
+TF_GOterm_table = read.table("./Fig4/TF_GOterm_table.txt", header = T, sep = "\t", stringsAsFactors = F)
+allGOBP = read.table("./Fig4/GSsize.txt", sep = "\t", header = T, stringsAsFactors = F)
 
 library(GO.db)
 parents = as.list(GOBPPARENTS)
@@ -298,9 +298,11 @@ names(silverStandard) = TFs
 ```
 
 
-The heatmap only used a TF-GO combo if it was in the "true positive" set. The clustering was then done with Cluster app and JavaTreeView. The finished products are `GOtable_5kb_updated.txt` and `GOtable_nearest_tss_updated.txt`
+The heatmap only used a TF-GO combo if it was in the "true positive" set. The clustering was then done with Cluster app and JavaTreeView. The finished products are `silverStandard_PE-CE_5kb_filter.txt` and `silverStandard_PE-CE_nearest_tss_filter.txt`
 
 Gathering data
+
+This entire section requires every analysis results and is only saved here for completion. Running this would require you to run all the analyses for the results files and change all the paths to re-clean them.
 ```{r eval = F}
 newpeaklist = read.table("./newpeaklist.txt",header=F,stringsAsFactors = F)
 
@@ -308,58 +310,45 @@ read.results <- function(path) {
 	read.table((path),comment.char="",quote="",sep="\t",header=T)
 }
 
-#In ONES, will take all PE and CE results and find difference of PValues, then store in table
-make_GO_table <- function(ldef) {
-	result = read.results("/espresso/leetaiyi/updated_results/5kb.chipenrich.wgEncodeAwgTfbsHaibGm12878Atf3Pcr1xUniPk.narrowPeak_results.tab")
-	bigtable = result[order(result$Geneset.ID),2:3]
-	titles = NULL
+#Will take all PE and CE results and find difference of PValues, then store in table
+make_silverStandard_heatmap <- function(ldef){ 
+	experiments = newpeaklist[newpeaklist$V4 != "Pol2",]
+	wholetable = data.frame(matrix(0,nrow = length(GOtotest), ncol = nrow(experiments)+1))
+	colnames(wholetable) = c("GO", sapply(experiments$V1,function(x){paste(experiments$V2[experiments$V1==x],experiments$V4[experiments$V1==x])}))
+	wholetable$GO = GOtotest
+	index=2
+	for (experiment in experiments$V1) {
+		print(experiment)
+		CEresults = read.results(sprintf("/espresso/leetaiyi/updated_results/%s.%s.%s_results.tab",ldef,"chipenrich",experiment))
+		PEresults = read.results(sprintf("/espresso/leetaiyi/updated_results/%s.%s.%s_results.tab",ldef,"polyenrich",experiment))
+		
+		CE.p = CEresults$P.value[match(GOtotest, CEresults$Geneset.ID)]
+		PE.p = PEresults$P.value[match(GOtotest, PEresults$Geneset.ID)]
+		
+		diff = log10(CE.p/PE.p)
+		
+		wholetable[,index] = diff
+		index = index+1
+	}
 	
-	for (i in 1:nrow(newpeaklist)) {
-		print(i)
-		linecolumn=NULL
-		paths = list.files("/espresso/leetaiyi/updated_results/",pattern=sprintf(".*.%s_results",newpeaklist$V1[i]))
-		if (length(paths)>0) {
-			path_ce <- list.files("/espresso/leetaiyi/updated_results/",pattern=sprintf("%s.chipenrich.%s_results.tab",ldef,newpeaklist$V1[i]))[1]
-			path_pe <- list.files("/espresso/leetaiyi/updated_results/",pattern=sprintf("%s.polyenrich.%s_results.tab",ldef,newpeaklist$V1[i]))[1]
-			
-			if (is.na(path_ce) || is.na(path_pe)) {
-				break
-			}
-			
-			results_ce <- read.table(sprintf("/espresso/leetaiyi/updated_results/%s",path_ce), comment.char="",quote="",sep="\t",header=TRUE)
-			results_nb <- read.table(sprintf("/espresso/leetaiyi/updated_results/%s",path_pe), comment.char="",quote="",sep="\t",header=TRUE)
-			
-			sigpvals = -log10(results_nb[order(results_nb$Geneset.ID),]$P.value)+
-				log10(results_ce[order(results_ce$Geneset.ID),]$P.value)
-			
-			linecolumn = cbind(linecolumn,sigpvals)
-
-		}
-		titles = c(titles, paste(newpeaklist$V2[i],newpeaklist$V4[i],sep=""))
-		bigtable = cbind(bigtable, apply(linecolumn,1,median))
-	}
-	names(bigtable) = c("GO", "Description", titles)
-	write.table(bigtable, sprintf("~/GOtable_%s_updated.txt",ldef),quote=F,sep="\t",row.names = F)
+	
+	
+	wholetable$GO = paste(wholetable$GO, resultsGOs$Description[match(GOtotest, resultsGOs$Geneset.ID)])
+	write.table(wholetable, sprintf("~/silverStandard_PE-CE_%s.txt",ldef))
 }
 
-
-#Getting rid of GO terms that do not meet threshold 
-# pthresh is p-value threshold
-# fthresh is number of experiments needed that meet the pthresh
-
-#Chose p=2, f=9 for manuscript
-filter_GOtable <- function(ldef, pthresh, fthresh) {
-	GOtablefull <- read.table(sprintf("./GOtables/GOtable_%s_updated.txt",ldef), sep="\t", header=T, quote="\"")
-	todrop = NULL
-	for (i in 1:nrow(GOtablefull)) {
-		if (sum(abs(GOtablefull[i,3:92])>pthresh)<=fthresh) {
-			todrop=c(todrop,i)
-		}
+filter_out_notpositives = function(ldef) {
+	silverStandardcomp = read.table(sprintf("./silverStandard/silverStandard_PE-CE_%s.txt",ldef),header=T,stringsAsFactors = F, sep="\t")
+	
+	for (column in colnames(silverStandardcomp[,-1])) {
+		tf = find_tflab(strsplit(column,"\\.")[[1]][2])
+		GOsinTF = TF_GOterm_table$GOALL[TF_GOterm_table$SYMBOL == tf]
+		GOcolumn = sapply(silverStandardcomp$GO, function(x){strsplit(x, " ")[[1]][1]})
+		silverStandardcomp[!(GOcolumn %in% GOsinTF),column] = NA
 	}
-	GOtablefilter = GOtablefull[-todrop,]
-	write.table(GOtablefilter[,-1], sprintf("./GOtable_%s_updated_filtered_%sp_%sf.txt",ldef,pthresh,fthresh),quote=F,sep="\t",row.names = F)
+	
+	write.table(silverStandardcomp,sprintf("./silverStandard/silverStandard_PE-CE_%s_filter.txt",ldef),quote=F, sep="\t", row.names = F)
 }
-
 
 ```
 
@@ -368,6 +357,7 @@ Power Simulations
 
 Required functions and data to load.
 Larger data not included in repository due to size concerns.
+This section requires downloaded data to do simulations. 
 ```{r eval = F}
 library(chipenrich)
 
@@ -375,17 +365,17 @@ smallgo = "GO:0070534" #42 genes
 medgo = "GO:0043410" #471 genes
 
 #Small dataset: 4194 index 65
-peaks_small = "~/Desktop/RESEARCH/ENCODEpeaks/wgEncodeAwgTfbsHaibK562Six5Pcr1xUniPk.narrowPeak"
+peaks_small = "./wgEncodeAwgTfbsHaibK562Six5Pcr1xUniPk.narrowPeak"
 
 #Medium dataset: 11129 index 34
-peaks_medium ="~/Desktop/RESEARCH/ENCODEpeaks/wgEncodeAwgTfbsSydhH1hescMaxUcdUniPk.narrowPeak"
+peaks_medium ="./wgEncodeAwgTfbsSydhH1hescMaxUcdUniPk.narrowPeak"
 
 #Large dataset: NHEK Keratinocyte ATAC seq, 99478 PMID: 27618450
-ATAC = "~/Desktop/RESEARCH/PE_additions/61592_peaks.bed"
+ATAC = "./61592_peaks.bed"
 
 #Largest dataset: 1,094,736
 #Download this from UCSC Genome Browser, link down in Figure 6 comments
-peaks_largest = read.table("~/Desktop/RESEARCH/hgTableswFam.txt", stringsAsFactors = F)
+peaks_largest = read.table("./hgTableswFam.txt", stringsAsFactors = F)
 Alu = peaks_largest[grepl("Alu",peaks_largest$V4),1:3]
 Alu = subset(Alu, !grepl(pattern = "_", x = Alu$V1) )
 colnames(Alu) = c("chr","start","end")
@@ -551,27 +541,25 @@ for (i in 1:2) {
 
 ```
 
-Creating the plots
+###Creating the plots
 ```{r eval = F}
 get_powersim_bar_withH <- function(tf, go, alpha=0.05) {
 	n=1000
 	#	alpha = 0.001
-	setwd("~/Desktop/RESEARCH/")
+	pC005 = readRDS(sprintf("./Fig5/powersim_%s_%s_CEbias_0.05_1000.rds",tf,go))
+	pC01 = readRDS(sprintf("./Fig5/powersim_%s_%s_CEbias_0.1_1000.rds",tf,go))
+	pC02 = readRDS(sprintf("./Fig5/powersim_%s_%s_CEbias_0.2_1000.rds",tf,go))
+	pC03 = readRDS(sprintf("./Fig5/powersim_%s_%s_CEbias_0.3_1000.rds",tf,go))
 	
-	pC005 = readRDS(sprintf("./powersims/powersim_%s_%s_CEbias_0.05_1000.rds",tf,go))
-	pC01 = readRDS(sprintf("./powersims/powersim_%s_%s_CEbias_0.1_1000.rds",tf,go))
-	pC02 = readRDS(sprintf("./powersims/powersim_%s_%s_CEbias_0.2_1000.rds",tf,go))
-	pC03 = readRDS(sprintf("./powersims/powersim_%s_%s_CEbias_0.3_1000.rds",tf,go))
+	pP005 = readRDS(sprintf("./Fig5/powersim_%s_%s_PEbias_0.05_1000.rds",tf,go))
+	pP01 = readRDS(sprintf("./Fig5/powersim_%s_%s_PEbias_0.1_1000.rds",tf,go))
+	pP02 = readRDS(sprintf("./Fig5/powersim_%s_%s_PEbias_0.2_1000.rds",tf,go))
+	pP03 = readRDS(sprintf("./Fig5/powersim_%s_%s_PEbias_0.3_1000.rds",tf,go))
 	
-	pP005 = readRDS(sprintf("./powersims/powersim_%s_%s_PEbias_0.05_1000.rds",tf,go))
-	pP01 = readRDS(sprintf("./powersims/powersim_%s_%s_PEbias_0.1_1000.rds",tf,go))
-	pP02 = readRDS(sprintf("./powersims/powersim_%s_%s_PEbias_0.2_1000.rds",tf,go))
-	pP03 = readRDS(sprintf("./powersims/powersim_%s_%s_PEbias_0.3_1000.rds",tf,go))
-	
-	pB005 = readRDS(sprintf("./powersims/powersim_%s_%s_balanced_0.05_1000.rds",tf,go))
-	pB01 = readRDS(sprintf("./powersims/powersim_%s_%s_balanced_0.1_1000.rds",tf,go))
-	pB02 = readRDS(sprintf("./powersims/powersim_%s_%s_balanced_0.2_1000.rds",tf,go))
-	pB03 = readRDS(sprintf("./powersims/powersim_%s_%s_balanced_0.3_1000.rds",tf,go))
+	pB005 = readRDS(sprintf("./Fig5/powersim_%s_%s_balanced_0.05_1000.rds",tf,go))
+	pB01 = readRDS(sprintf("./Fig5/powersim_%s_%s_balanced_0.1_1000.rds",tf,go))
+	pB02 = readRDS(sprintf("./Fig5/powersim_%s_%s_balanced_0.2_1000.rds",tf,go))
+	pB03 = readRDS(sprintf("./Fig5/powersim_%s_%s_balanced_0.3_1000.rds",tf,go))
 	
 	CC005_power = c(sum(as.numeric(pC005$CE_pval) < alpha)/n, 
 					sum(as.numeric(pC01$CE_pval) < alpha)/n,
@@ -629,6 +617,8 @@ get_powersim_bar_withH <- function(tf, go, alpha=0.05) {
 	
 	
 }
+smallgo = "GO:0070534" #42 genes 
+medgo = "GO:0043410" #471 genes
 
 get_powersim_bar_withH("wgEncodeAwgTfbsHaibK562Six5Pcr1xUniPk.narrowPeak",smallgo)
 get_powersim_bar_withH("wgEncodeAwgTfbsSydhH1hescMaxUcdUniPk.narrowPeak",smallgo)
@@ -680,7 +670,7 @@ family = "Alu" # or L1
 	)
 ```
 
-Data was aggregated into a table with rows being GOterms and columns being the family/locus definition combination. The table was then ran through the Cluster and Java TreeView applications, but here is the aggregated raw table
+Data was aggregated into this table with rows being GOterms and columns being the family/locus definition combination. The table was then ran through the Cluster and Java TreeView applications, but here is the aggregated raw table
 ```{r eval = F}
 REtable = read.table("./REtable.txt", sep = "\t", stringsAsFactors = F, header = T, quote = "")
 ```
@@ -692,7 +682,7 @@ Spline comparisons
 Locus length spline
 The package needs to be loaded through `load_all` due to requiring hidden functions.
 ```{r eval = F}
-ppg = read.table("~/Desktop/RESEARCH/updated_results/nearest_tss.chipenrich.wgEncodeAwgTfbsHaibH1hescYy1sc281V0416102UniPk.narrowPeak_peaks-per-gene.tab", header = T)
+ppg = read.table("./SFig1/nearest_tss.chipenrich.wgEncodeAwgTfbsHaibH1hescYy1sc281V0416102UniPk.narrowPeak_peaks-per-gene.tab", header = T)
 ppg = ppg[order(ppg$log10_length),]
 ppg$group = ceiling((1:nrow(ppg)/25))
 
@@ -782,13 +772,13 @@ lines(ppg$log10_length[order(ppg$log10_length,decreasing = F)][ppg$goterm==0], p
 ###Supplementary Figure 2
 Type 1 error
 
-The data files are aggregates from all the permutations, which are not in the repository for size concerns.
+The data files are aggregates from all the permutations. The individual permutations are not in the repository for size concerns.
 ```{r eval = F}
-newpeaklist = read.table("~/Desktop/RESEARCH/newpeaklist.txt",header = F, stringsAsFactors = F)
+newpeaklist = read.table("./Fig4/newpeaklist 20191203.txt",header = F, stringsAsFactors = F)
 thresh = 0.05
 rndmat = matrix(0,90,6)
 for (index in 1:90) {
-	rnds = read.table(sprintf("~/Desktop/RESEARCH/rnds/rnds2019.._%s_nearest_tss_polyenrich.txt",newpeaklist$V1[index]))
+	rnds = read.table(sprintf("./SFig2/rnds2019_%s_nearest_tss_polyenrich.txt",newpeaklist$V1[index]))
 	rndmat[index,] = colSums(rnds < thresh)/nrow(rnds)
 }
 boxplot(rndmat[,1:3], main = "Nearest TSS Polyenrich", ylim = c(0,0.1), names = c("complete","bylength","bylocation"))
@@ -798,7 +788,7 @@ abline(h=0.05, col = "red")
 thresh = 0.001
 rndmat = matrix(0,90,6)
 for (index in 1:90) {
-	rnds = read.table(sprintf("~/Desktop/RESEARCH/rnds/rnds2019.._%s_nearest_tss_polyenrich.txt",newpeaklist$V1[index]))
+	rnds = read.table(sprintf("./SFig2/rnds2019.._%s_nearest_tss_polyenrich.txt",newpeaklist$V1[index]))
 	rndmat[index,] = colSums(rnds < thresh)/nrow(rnds)
 	if (sum(rnds$rndloc<thresh) > 8*nrow(rnds)*thresh) {print(index)} # Looking for the largest inflated ones
 }
@@ -817,11 +807,10 @@ Data is same as from [Figure 5](#figure-5)
 Addendum plot for larger data sets
 ```{r eval = F}
 get_powersim_large = function(tf, go , alpha = 0.05) { 
-	setwd("~/Desktop/RESEARCH/")
-	pB005 = readRDS(sprintf("./powersims/powersim.mini_%s_%s_balanced_0.05_500.rds",tf,go))
-	pB01 = readRDS(sprintf("./powersims/powersim.mini_%s_%s_balanced_0.1_500.rds",tf,go))
-	pB02 = readRDS(sprintf("./powersims/powersim.mini_%s_%s_balanced_0.2_500.rds",tf,go))
-	pB03 = readRDS(sprintf("./powersims/powersim.mini_%s_%s_balanced_0.3_500.rds",tf,go))
+	pB005 = readRDS(sprintf("./Fig5/powersim.mini_%s_%s_balanced_0.05_500.rds",tf,go))
+	pB01 = readRDS(sprintf("./Fig5/powersim.mini_%s_%s_balanced_0.1_500.rds",tf,go))
+	pB02 = readRDS(sprintf("./Fig5/powersim.mini_%s_%s_balanced_0.2_500.rds",tf,go))
+	pB03 = readRDS(sprintf("./Fig5/powersim.mini_%s_%s_balanced_0.3_500.rds",tf,go))
 	
 	n = 500
 	
@@ -845,6 +834,8 @@ get_powersim_large = function(tf, go , alpha = 0.05) {
 
 	
 }
+smallgo = "GO:0070534" #42 genes 
+medgo = "GO:0043410" #471 genes
 par(mfrow = c(2,2), mar = c(2,2.3,1,1))
 get_powersim_large("large",smallgo, 0.05)
 get_powersim_large("largest",smallgo, 0.05)
@@ -859,11 +850,11 @@ Validations between ChIP-Enrich, Poly-Enrich, and GREAT
 All data is from [Figure 4](#figure-4)
 
 ```{r eval = F} 
-newpeaklist = read.table("~/Box Sync/EnhancerProject/newpeaklist 20191203.txt",sep = "\t", stringsAsFactors = F)
-TF_GOterm_table = read.table("~/Desktop/RESEARCH/TF_GOterm_table.txt", header = T, sep = "\t", stringsAsFactors = F)
+newpeaklist = read.table("./Fig4/newpeaklist 20191203.txt",sep = "\t", stringsAsFactors = F)
+TF_GOterm_table = read.table("./Fig4/TF_GOterm_table.txt", header = T, sep = "\t", stringsAsFactors = F)
 #silverStandard_TAS = readRDS("~/Desktop/RESEARCH/silverStandard/silverStandardTAS.rds")
 # We did not use TAS only as the number of true positives becomes extremely low.
-silverStandardNew = readRDS("~/Desktop/RESEARCH/silverStandard/silverStandardNew.rds")
+silverStandardNew = readRDS("./Fig4/silverStandardNew.rds")
 
 TFs = intersect(names(table(TF_GOterm_table$SYMBOL)), names(silverStandardNew))
 
@@ -938,17 +929,23 @@ validations = do.call(rbind, validations)
 
 Making the plots
 ```{r eval = F}
-validations = readRDS("~/Desktop/RESEARCH/silverStandardValidations.rds")
+silverStandardNew = readRDS("./Fig4/silverStandardNew.rds")
+validations = readRDS("./Fig4/silverStandardValidations.rds")
 #Only want the TFs with over XX true positives
 TPthresh=50
 indexfilter = sapply(silverStandardNew, function(x){length(x$positives)>=TPthresh})
 validations = validations[indexfilter,]
 plot(-1,ylim = c(0,0.6), xlim = c(1,3), ylab = "Empirical False Positive Rate", xlab = "Method", xaxt = "n")
+par(new=T)
+boxplot(validations[,c(1,3,2)], ylim = c(0,0.6), width = rep(0.05,3), names = rep("",3),
+		boxwex = 0.4)
+par(new=T)
 for (i in 1:nrow(validations)) {
 	cols = ifelse(validations[i,3]>max(validations[i,c(1,2)]),"red","black")
 
 	lines(validations[i,c(1,3,2)], type = "b", col = cols, pch = 1)
 }
+
 axis(side = 1, at = c(1,2,3), labels = c("CE","GREAT","PE"))
 ```
 
@@ -1021,13 +1018,12 @@ Making plots
 
 `plot_pval_comp` at common functions at the top of [Figs and Tables](#figs-and-tables)
 ```{r eval = F}
-setwd("~/GitHub/polyenrich/SFig7/")
 
-histPE = readRDS("./nearest_tss.polyenrich.wgEncodeBroadHistoneGm12878H3k4me1StdPk.broadPeak.rds")$results[,c(2, 4, 5, 8, 9)]
-histBE = readRDS("./nearest_tss.broadenrich.wgEncodeBroadHistoneGm12878H3k4me1StdPk.broadPeak.rds")$results[,c(2, 4, 5, 8, 9)]
+histPE = readRDS("./SFig7/nearest_tss.polyenrich.wgEncodeBroadHistoneGm12878H3k4me1StdPk.broadPeak.rds")$results[,c(2, 4, 5, 8, 9)]
+histBE = readRDS("./SFig7/nearest_tss.broadenrich.wgEncodeBroadHistoneGm12878H3k4me1StdPk.broadPeak.rds")$results[,c(2, 4, 5, 8, 9)]
 plot_pval_comp(histBE,histPE, "BE","PE", "Gm12878 H3k4me1" )
-histPE = readRDS("./nearest_tss.polyenrich.wgEncodeBroadHistoneGm12878H3k4me3StdPk.broadPeak.rds")$results[,c(2, 4, 5, 8, 9)]
-histBE = readRDS("./nearest_tss.broadenrich.wgEncodeBroadHistoneGm12878H3k4me3StdPk.broadPeak.rds")$results[,c(2, 4, 5, 8, 9)]
+histPE = readRDS("./SFig7/nearest_tss.polyenrich.wgEncodeBroadHistoneGm12878H3k4me3StdPk.broadPeak.rds")$results[,c(2, 4, 5, 8, 9)]
+histBE = readRDS("./SFig7/nearest_tss.broadenrich.wgEncodeBroadHistoneGm12878H3k4me3StdPk.broadPeak.rds")$results[,c(2, 4, 5, 8, 9)]
 plot_pval_comp(histBE,histPE, "BE","PE", "Gm12878 H3k4me3")
 ```
 
